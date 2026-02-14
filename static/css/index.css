@@ -1,5 +1,5 @@
 body {
-  font-family: 'Noto Sans', sans-serif;
+  font-family: 'Inconsolata', monospace;
 }
 
 
@@ -27,7 +27,7 @@ body {
 }
 
 .teaser {
-  font-family: 'Google Sans', sans-serif;
+  font-family: 'Inconsolata', monospace;
 }
 
 #teaser {
@@ -49,11 +49,11 @@ body {
 }
 
 .publication-title {
-    font-family: 'Google Sans', sans-serif;
+    font-family: 'Inconsolata', monospace;
 }
 
 .publication-authors {
-    font-family: 'Google Sans', sans-serif;
+    font-family: 'Inconsolata', monospace;
 }
 
 .publication-venue {

@@ -116,7 +116,7 @@
   </script>
 
 
-  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap"
         rel="stylesheet">
 
   <link rel="stylesheet" href="./static/css/bulma.min.css">
@@ -216,12 +216,9 @@
 <section class="hero teaser">
   <div class="container is-max-desktop">
     <div class="hero-body">
-      <img src="./static/images/dronevla_teaser.png" alt="DroneVLA teaser" style="width:100%; height:auto; border-radius: 12px;">
-      <p class="has-text-justified" style="margin-top: 1rem;">
-        <span class="splat_mover">DroneVLA</span> studies how a manipulation-pretrained VLA transfers to aerial navigation and pick-and-place.
-        We combine fine-tuning with inference-time <b>Physics-Aware Guidance</b> and <b>Real-Time Chunking</b> to address flight dynamics,
-        and use <b>Gaussian Splatting</b> to synthesize training data.
-      </p>
+      <video id="teaser" autoplay muted loop playsinline height="100%">
+        <source src="./video/demo_video_air_vla_fixed.mov" type="video/mp4">
+      </video>
     </div>
   </div>
 </section>
@@ -233,7 +230,21 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Vision-Language-Action (VLA) foundation models such as &pi;<sub>0</sub> show strong cross-embodiment generalization for fixed-base manipulation, but transferring them to aerial platforms is challenging due to underactuated, highly dynamic flight. We introduce <span class="splat_mover">DroneVLA</span>, a system study of fine-tuning manipulation-pretrained VLAs for aerial navigation and pick-and-place. We find that while visual representations transfer effectively, flight control dynamics do not. To bridge this “dynamics gap” without retraining the foundation model, we add <b>Physics-Aware Guidance</b> during flow-matching sampling to inject tracking and payload constraints. We also use a <b>Gaussian Splatting</b> pipeline to synthesize training data. In real-world experiments, Physics-Aware Guidance + Real-Time Chunking improve navigation success from <b>30% → 65%</b>, and in synthetic settings reach <b>95%</b> success where direct fine-tuning fails. However, long-horizon compositional tasks still fail completely (<b>0%</b>), suggesting current VLA architectures struggle with high-level sequencing after domain-specific fine-tuning.
+            Vision-Language-Action (VLA) models such as &pi;<sub>0</sub> have demonstrated remarkable generalization across diverse fixed-base manipulators. However, transferring these foundation models to aerial platforms remains an open challenge due to the fundamental mismatch between the quasi-static dynamics of fixed-base arms and the underactuated, highly dynamic nature of flight. In this work, we introduce <span class="splat_mover">AirVLA</span>, a system that investigates the transferability of manipulation-pretrained VLAs to aerial pick-and-place tasks. We find that while visual representations transfer effectively, the specific control dynamics required for flight do not. To bridge this "dynamics gap" without retraining the foundation model, we introduce a <b>Payload-Aware Guidance</b> mechanism that injects payload constraints directly into the policy's flow-matching sampling process. To overcome data scarcity, we further utilize a <b>Gaussian Splatting</b> pipeline to synthesize navigation training data. We evaluate our method through a cumulative 460 real-world experiments which demonstrate that this synthetic data is a key enabler of performance, unlocking 100% success in navigation tasks where directly fine-tuning on teleoperation data alone attains 81% success. Our inference-time intervention, Payload-Aware Guidance, increases real-world pick-and-place task success from 23% to 50%. Finally, we evaluate the model on a long-horizon compositional task, achieving a 62% overall success rate. These results suggest that pre-trained manipulation VLAs, with appropriate data augmentation and physics-informed guidance, can transfer to aerial manipulation and navigation, as well as the composition of these tasks.
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="columns is-centered">
+      <div class="column is-full">
+        <div class="content">
+          <img src="./static/images/dronevla_teaser.png" alt="AirVLA banner figure" style="width:100%; height:auto; border-radius: 12px;">
+          <p class="has-text-justified" style="margin-top: 1rem;">
+            <span class="splat_mover">AirVLA</span> studies how a manipulation-pretrained VLA transfers to aerial navigation and pick-and-place.
+            We combine fine-tuning with inference-time <b>Payload-Aware Guidance</b> and <b>Real-Time Chunking</b> to address flight dynamics,
+            and use <b>Gaussian Splatting</b> to synthesize training data.
           </p>
         </div>
       </div>
