@@ -1,5 +1,3 @@
-# Large video files
-video/
-*.mov
-*.mp4
-*.avi
+# Large video files - keep demo_video_air_vla.mov but ignore others
+video/*
+!video/demo_video_air_vla.mov
