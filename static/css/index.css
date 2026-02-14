@@ -1,5 +1,5 @@
 body {
-  font-family: 'Inconsolata', monospace;
+  font-family: 'IBM Plex Serif', serif;
 }
 
 
@@ -27,7 +27,7 @@ body {
 }
 
 .teaser {
-  font-family: 'Inconsolata', monospace;
+  font-family: 'IBM Plex Serif', serif;
 }
 
 #teaser {
@@ -53,7 +53,7 @@ body {
 }
 
 .publication-authors {
-    font-family: 'Inconsolata', monospace;
+    font-family: 'IBM Plex Serif', serif;
 }
 
 .publication-venue {
