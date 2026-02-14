@@ -241,9 +241,7 @@
         <div class="content">
           <img src="./static/images/splashv5.svg" alt="AirVLA banner figure" style="width:100%; height:auto; border-radius: 12px;">
           <p class="has-text-justified" style="margin-top: 1rem;">
-            <span class="splat_mover">AirVLA</span> studies how a manipulation-pretrained VLA transfers to aerial navigation and pick-and-place.
-            We combine fine-tuning with inference-time <b>Payload-Aware Guidance</b> and <b>Real-Time Chunking</b> to address flight dynamics,
-            and use <b>Gaussian Splatting</b> to synthesize training data.
+            <b>Overview of AirVLA:</b> Our method fine-tunes the &pi;<sub>0</sub> vision-language-action model on a combination of teleoperated and 3D Gaussian Splatting synthetic data. <b>(Left)</b> The policy processes multimodal inputs including natural language commands, proprioception, and multi-view camera observations. <b>(Right)</b> To ensure robust flight during manipulation, we introduce a payload-aware guidance signal, <i>F</i><sub>guide</sub>, combined with real-time chunking. <b>(Center)</b> This enables <span class="splat_mover">AirVLA</span> to execute novel, zero-shot compositional tasks, such as navigating through gates and manipulating objects.
           </p>
         </div>
       </div>
