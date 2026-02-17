@@ -251,14 +251,71 @@
 
     <div class="columns is-centered">
       <div class="column is-four-fifths">
-        <h2 class="title is-3 has-text-centered">Method Overview</h2>
+        <h2 class="title is-3 has-text-centered">Method</h2>
+        
+        <h3 class="title is-4">System Overview</h3>
         <div class="content has-text-justified">
-          <ul>
-            <li><b>Fine-tuning</b> a flow-matching VLA policy on aerial navigation and pick-and-place.</li>
-            <li><b>Real-Time Chunking (RTC)</b> to synchronize inference with execution and reduce action discontinuities.</li>
-            <li><b>Physics-Aware Guidance</b> to steer sampling with tracking-error objectives and payload-aware vertical support.</li>
-            <li><b>Gaussian Splatting</b> to synthesize training environments and demonstrations for broader coverage.</li>
-          </ul>
+          <p>
+            <span class="splat_mover">AirVLA</span> is a vision-language-action system for aerial manipulation that transfers manipulation capabilities from foundation models pretrained on fixed-base robot arms to an underactuated quadrotor platform. The system takes as input RGB images from multiple viewpoints and a natural language task description, and outputs relative end-effector pose commands executed by a low-level flight controller.
+          </p>
+          <p>
+            The key challenge in this transfer is the mismatch between the quasi-static regimes of tabletop manipulation and aerial manipulation, where the platform must continuously stabilize against gravity while simultaneously executing precise gripper motions. Grasping an object introduces a step change in effective mass that, if uncompensated, causes the drone to sag and potentially fail the task.
+          </p>
+          <p>
+            Our approach addresses this challenge through two main contributions: <b>(1)</b> a physics-aware guidance mechanism that augments the pretrained policy's action generation process with payload-aware vertical compensation at inference time, and <b>(2)</b> a Gaussian-splatting data pipeline that enables efficient collection and synthesis of diverse training trajectories from a small number of seed flights. Together, these allow a VLA model pretrained on large-scale robot manipulation data to perform aerial pick-and-place and navigation with minimal drone-specific fine-tuning.
+          </p>
+        </div>
+
+        <h3 class="title is-4">Hardware</h3>
+        <div class="content has-text-justified">
+          <p>
+            The system integrates the ModalAI Starling 2 Max drone with a customized Universal Manipulation Interface (UMI) gripper and multiple cameras to enable autonomous aerial manipulation. The Starling 2 Max is powered by the VOXL 2 companion computer (Qualcomm QRB5165). The customized UMI-style gripper is attached to the underside of the drone, enabling dynamic grasping. The system integrates one external camera and two onboard cameras (downward and forward-facing), providing RGB images at 5Hz.
+          </p>
+          <p>
+            <b>Gripper Design:</b> The gripper is designed to be built cheaply without specialized tools. The frame is entirely 3D printed, with two hobby-grade servos slotting in without screws. The fingers are adapted from the UMI gripper, facilitating direct comparison with arm-based policies trained with similar end-effector geometry. The design prioritizes low weight for extended flight time while maintaining sufficient grip strength for the target objects.
+          </p>
+          <p>
+            <b>Observation and Action Spaces:</b> The observation space consists of RGB images from three cameras at 256×256 resolution, the drone's estimated pose from a motion capture system, and gripper aperture. The action space, consisting of the drone position and yaw, is represented as an action chunk <i>A</i> ∈ ℝ<sup><i>H</i>×<i>D</i></sup> (i.e., end-effector 4 DoF delta poses and gripper commands <i>D</i> over horizon <i>H</i>). Actions are generated at 10 Hz and executed by the PX4 flight controller via position setpoints.
+          </p>
+        </div>
+
+        <h3 class="title is-4">Policy Architecture</h3>
+        <div class="content has-text-justified">
+          <p>
+            We build on &pi;<sub>0</sub>, a vision-language-action model that represents the conditional action distribution using a flow-matching (continuous-time) generative model. Given an observation <i>o</i> (images, proprioception, language), &pi;<sub>0</sub> defines a velocity field <i>v<sub>&theta;</sub>(x<sub>&tau;</sub>, o, &tau;)</i> over latent action chunks and diffusion/flow time &tau; ∈ [0,1]. Sampling draws <i>x</i><sub>0</sub> ~ 𝒩(0, <i>I</i>) and integrates the ODE to obtain the generated action chunk <i>A</i> = <i>x</i><sub>1</sub>.
+          </p>
+          <p>
+            For real-time execution, we employ <b>Real-Time Chunking (RTC)</b>, which enables asynchronous inference by <i>freezing</i> the prefix of the next chunk that will execute before inference completes, and <i>inpainting</i> the remaining suffix conditioned on the frozen prefix. RTC defines a soft temporal mask over the horizon that blends previously committed actions with newly generated actions to avoid discontinuities at chunk boundaries.
+          </p>
+        </div>
+
+        <h3 class="title is-4">Physics-Aware Guidance for Action Generation</h3>
+        <div class="content has-text-justified">
+          <p>
+            RTC shows that inference-time steering can be implemented by modifying the velocity field during sampling. We generalize this idea by introducing a loss Φ(<i>A</i>; <i>o</i>) over the <i>denoised</i> action chunk, and adding a gradient correction term to the base velocity field. Intuitively, we seek samples that both (i) have high probability under the base policy and (ii) minimize the guidance loss. This formulation seeks a 'sweet spot' between the policy's priors and physical constraints—biasing the sampling process toward actions that are high-probability under the VLA (preserving learned manipulation skills) while simultaneously minimizing the cost (enforcing flight feasibility), effectively steering the drone at runtime without retraining.
+          </p>
+          <p>
+            <b>Payload-Aware Vertical Guidance:</b> In aerial manipulation, the dominant disturbance during grasping is an effective mass increase that manifests as vertical sag under load. Rather than modeling full 6-DOF dynamics, we apply guidance only on the altitude-related action dimension. We bias the drone toward slightly higher altitude under load via a tuned offset capturing the expected sag for typical payloads.
+          </p>
+          <p>
+            The payload confidence α(<i>o</i>, <i>A</i><sub><i>t</i>-1</sub>) ∈ [0,1] is computed from the previously executed action chunk and the current measured gripper aperture. When α ≈ 0, the loss vanishes and sampling reduces to vanilla RTC; when α ≈ 1, the sampler prefers chunks whose vertical component is biased toward the desired altitude, compensating for payload. This can be viewed as mode-dependent feedforward (gain scheduling / gravity compensation), but injected <i>inside</i> the generative policy's sampling dynamics.
+          </p>
+        </div>
+
+        <h3 class="title is-4">Gaussian Splat Data Pipeline</h3>
+        <div class="content has-text-justified">
+          <p>
+            Collecting aerial manipulation demonstrations is time-consuming and requires skilled pilots. To efficiently generate diverse training data, we adopt a "Flying in Gaussian Splats"-style approach that couples photorealistic Gaussian-splatting reconstructions with a lightweight drone dynamics model to synthesize large volumes of training data from a small set of seed demonstrations.
+          </p>
+          <p>
+            <b>Scene Reconstruction:</b> We reconstruct each scene from short walk-throughs captured with the drone's forward-facing camera, resulting in metrically scaled poses used to train a 3D Gaussian splatting model. The resulting model renders photorealistic images from arbitrary camera poses in the captured region.
+          </p>
+          <p>
+            <b>Gripper Segmentation and Compositing:</b> The downward-facing camera provides critical visual information for manipulation, but the gripper is persistently visible in its field of view. Including raw downward-facing images would introduce an observation bias into the policy. Thus, we explicitly treat the gripper as a separate foreground layer and composite it onto renders from a gripper-free scene model. We use Segment Anything (SAM) to extract gripper masks and create a library of representative gripper appearances, which are then composited onto clean scene renders at synthesis time.
+          </p>
+          <p>
+            <b>Domain-Randomized Data Synthesis:</b> To enable the policy to recover from dangerous states near obstacles, we synthesize recovery trajectories by randomizing task geometry. For each nominal trajectory, we generate multiple randomized rollouts by sampling initial state perturbations and randomizing intermediate waypoints to increase diversity and induce recovery behaviors. We randomize terminal hover locations, gate exit waypoints, and insert additional waypoints that force the drone to pass near gate extremities (top, bottom, left, or right), eliciting recovery behavior. This procedure yields a large set of physically and geometrically plausible trajectories that cover both nominal executions and off-nominal approaches requiring recovery near gates.
+          </p>
         </div>
       </div>
     </div>
@@ -269,11 +326,303 @@
       <div class="column is-four-fifths">
         <h2 class="title is-3 has-text-centered">Results Highlights</h2>
         <div class="content has-text-justified">
+          <p>
+            We conducted a cumulative <b>460 real-world flight trials</b> to evaluate our method across three task categories: pick-and-place (Penguin Grasp), gate navigation, and compositional navigate-then-grasp tasks. Each method was evaluated across twenty trials per task to assess:
+          </p>
           <ul>
-            <li><b>Real-world navigation:</b> Physics-Aware Guidance + RTC improves success from <b>30% → 65%</b>.</li>
-            <li><b>Synthetic navigation:</b> Guidance + RTC reaches <b>95%</b> success where direct fine-tuning fails.</li>
-            <li><b>Compositional tasks:</b> Long-horizon navigate→pick→place remains at <b>0%</b> success after fine-tuning.</li>
+            <li><b>Transfer:</b> How manipulation-pretrained VLA capability transfers to an underactuated aerial manipulator</li>
+            <li><b>Inference-time control:</b> Whether RTC and payload-aware guidance reduce execution sensitivity</li>
+            <li><b>Data synthesis:</b> Whether Gaussian-splat-based synthetic augmentation improves navigation</li>
+            <li><b>Compositionality:</b> Whether a single policy can reliably compose navigation and grasping</li>
           </ul>
+        </div>
+
+        <h3 class="title is-4">Task Suite</h3>
+        <div class="content has-text-justified">
+          <ul>
+            <li><b>Penguin Grasp (Pick-and-Place):</b> "pick up the stuffed animal and put it in the blue bin"</li>
+            <li><b>Gate Navigation:</b> "fly through the gate and hover over the stuffed animal"</li>
+            <li><b>Compositional (Navigate-then-Grasp):</b> "fly through the gate and hover over the stuffed animal and then pick up the stuffed animal and put it in the blue bin"</li>
+          </ul>
+        </div>
+
+        <h3 class="title is-4">Task Demonstrations</h3>
+        <div class="content has-text-justified">
+          <p>
+            Below are example rollouts from our real-world experiments demonstrating successful task execution.
+          </p>
+        </div>
+
+        <div id="results-carousel-tasks" class="carousel results-carousel">
+          <div class="item item-penguin">
+            <video poster="" id="penguin" autoplay controls muted loop playsinline height="100%">
+              <source src="./video/tasks/penguin_grasp.mov" type="video/mp4">
+            </video>
+            <p style="text-align: center; margin-top: 0.5rem;"><b>Penguin Grasp:</b> Pick and place task</p>
+          </div>
+          <div class="item item-gate-left">
+            <video poster="" id="gate-left" autoplay controls muted loop playsinline height="100%">
+              <source src="./video/tasks/gate_nav_left.mov" type="video/mp4">
+            </video>
+            <p style="text-align: center; margin-top: 0.5rem;"><b>Gate Navigation (Left):</b> Navigate through left gate</p>
+          </div>
+          <div class="item item-gate-right">
+            <video poster="" id="gate-right" autoplay controls muted loop playsinline height="100%">
+              <source src="./video/tasks/gate_nav_right.mp4" type="video/mp4">
+            </video>
+            <p style="text-align: center; margin-top: 0.5rem;"><b>Gate Navigation (Right):</b> Navigate through right gate</p>
+          </div>
+          <div class="item item-comp">
+            <video poster="" id="comp" autoplay controls muted loop playsinline height="100%">
+              <source src="./video/tasks/comp_success.mp4" type="video/mp4">
+            </video>
+            <p style="text-align: center; margin-top: 0.5rem;"><b>Compositional Task:</b> Navigate then grasp</p>
+          </div>
+        </div>
+
+        <h3 class="title is-4">Single Task Performance</h3>
+        <div class="content has-text-justified">
+          <p>
+            Table 1 shows performance on individual tasks. Success rates are conditional—for example, "Place" success is conditioned on successful picks. We compare against ACT and Diffusion Policy baselines.
+          </p>
+        </div>
+
+        <div class="content">
+          <table class="styled-table">
+            <caption><b>Table 1: Single Task Performance Benchmarks (%).</b> Each method evaluated across 20 trials per task.</caption>
+            <thead>
+              <tr>
+                <th rowspan="2">Method</th>
+                <th colspan="2">Penguin Grasp</th>
+                <th colspan="2">Navigation (Non-Synthetic)</th>
+                <th colspan="2">Navigation (Synthetic)</th>
+              </tr>
+              <tr>
+                <th>Pick</th>
+                <th>Place</th>
+                <th>Gate</th>
+                <th>Hover</th>
+                <th>Gate</th>
+                <th>Hover</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>π<sub>0</sub> naive</td>
+                <td>50.0</td>
+                <td>0.0</td>
+                <td>50.0</td>
+                <td>60.0</td>
+                <td>45.0</td>
+                <td>100.0</td>
+              </tr>
+              <tr>
+                <td>π<sub>0</sub> + RTC</td>
+                <td>85.0</td>
+                <td>23.5</td>
+                <td>80.0</td>
+                <td>81.2</td>
+                <td>95.0</td>
+                <td>100.0</td>
+              </tr>
+              <tr style="background-color: #e8f5e9;">
+                <td>π<sub>0</sub> + RTC + payload-aware guidance (ours)</td>
+                <td><b>100.0</b></td>
+                <td><b>50.0</b></td>
+                <td>--</td>
+                <td>--</td>
+                <td>--</td>
+                <td>--</td>
+              </tr>
+              <tr>
+                <td>ACT</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+              </tr>
+              <tr>
+                <td>Diffusion Policy</td>
+                <td>10.0</td>
+                <td>0.0</td>
+                <td>15.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="title is-4">Compositional Task Performance</h3>
+        <div class="content has-text-justified">
+          <p>
+            Table 2 evaluates zero-shot compositional generalization on the combined navigate-then-grasp task. The policy was fine-tuned on individual tasks but tested on the combined prompt unseen during training.
+          </p>
+        </div>
+
+        <div class="content">
+          <table class="styled-table">
+            <caption><b>Table 2: Compositional Navigate-then-Grasp Success (%).</b> Each method evaluated across 20 trials per setting.</caption>
+            <thead>
+              <tr>
+                <th>Data Setting</th>
+                <th>Method</th>
+                <th>Gate</th>
+                <th>Hover</th>
+                <th>Pick</th>
+                <th>Place</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowspan="5"><b>No Synthetic</b></td>
+                <td>π<sub>0</sub> naive</td>
+                <td>35.0</td>
+                <td>85.7</td>
+                <td>42.9</td>
+                <td>0.0</td>
+              </tr>
+              <tr>
+                <td>π<sub>0</sub> + RTC</td>
+                <td>80.0</td>
+                <td>100.0</td>
+                <td>81.2</td>
+                <td>15.4</td>
+              </tr>
+              <tr style="background-color: #e8f5e9;">
+                <td>π<sub>0</sub> + RTC + payload-aware guidance (ours)</td>
+                <td>70.0</td>
+                <td>100.0</td>
+                <td><b>100.0</b></td>
+                <td>35.7</td>
+              </tr>
+              <tr>
+                <td>ACT</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+              </tr>
+              <tr>
+                <td>Diffusion Policy</td>
+                <td>5.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+              </tr>
+              <tr>
+                <td rowspan="5"><b>Synthetic</b></td>
+                <td>π<sub>0</sub> naive</td>
+                <td>70.0</td>
+                <td>85.7</td>
+                <td>25.0</td>
+                <td>0.0</td>
+              </tr>
+              <tr>
+                <td>π<sub>0</sub> + RTC</td>
+                <td>95.0</td>
+                <td>94.7</td>
+                <td>83.3</td>
+                <td>20.0</td>
+              </tr>
+              <tr style="background-color: #e8f5e9;">
+                <td>π<sub>0</sub> + RTC + payload-aware guidance (ours)</td>
+                <td>85.0</td>
+                <td>100.0</td>
+                <td>94.1</td>
+                <td><b>62.5</b></td>
+              </tr>
+              <tr>
+                <td>ACT</td>
+                <td>25.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+              </tr>
+              <tr>
+                <td>Diffusion Policy</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+                <td>0.0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="title is-4">Out-of-Distribution Robustness</h3>
+        <div class="content has-text-justified">
+          <p>
+            To assess generalization, we evaluated on novel objects and gate positions not seen during training.
+          </p>
+        </div>
+
+        <div class="content">
+          <table class="styled-table">
+            <caption><b>Table 3: Out-of-Distribution (OOD) Robustness (%).</b> Success rates for object and gate positioning variations.</caption>
+            <thead>
+              <tr>
+                <th colspan="3">Grasp (Object Variation)</th>
+                <th colspan="3">Navigation (Gate Locations)</th>
+              </tr>
+              <tr>
+                <th>Object</th>
+                <th>Pick</th>
+                <th>Place</th>
+                <th>Location</th>
+                <th>Gate</th>
+                <th>Hover</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Chips</td>
+                <td>10.0</td>
+                <td>0.0</td>
+                <td>Front</td>
+                <td>0.0</td>
+                <td>--</td>
+              </tr>
+              <tr>
+                <td>Sandwich</td>
+                <td>70.0</td>
+                <td>57.1</td>
+                <td>Left</td>
+                <td>0.0</td>
+                <td>--</td>
+              </tr>
+              <tr>
+                <td>Box</td>
+                <td>30.0</td>
+                <td>33.3</td>
+                <td>Right</td>
+                <td>40.0</td>
+                <td>100.0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="title is-4">Key Findings</h3>
+        <div class="content has-text-justified">
+          <p>
+            <b>Inference-time structure is critical for aerial pick-and-place.</b> Naive fine-tuning achieves 0% place success, with failures dominated by missed grasps and post-contact disturbances. RTC improves success to 23.5% by stabilizing execution across chunk boundaries, and our payload-aware guidance further improves success to 50%, compensating for payload-induced altitude sag.
+          </p>
+          <p>
+            <b>RTC substantially improves gate navigation.</b> In non-synthetic trials, RTC increases gate traversal from 50% to 80%, and from 45% to 95% in synthetic trials. This suggests that re-planning at runtime mitigates compounding errors during aggressive motion.
+          </p>
+          <p>
+            <b>Synthetic augmentation helps most when paired with RTC.</b> In the synthetic setting, π<sub>0</sub>+RTC achieves 95% success at gate traversal. This suggests that synthetic augmentation expands coverage of approaches and recoveries, but reliable deployment still benefits from inference-time stabilization.
+          </p>
+          <p>
+            <b>Compositional tasks reveal zero-shot generalization.</b> Our method achieves a 62.5% overall conditioned success rate on the compositional task, despite never being trained on the combined prompt. This demonstrates strong ability to compose atomic navigation and manipulation behaviors.
+          </p>
+          <p>
+            <b>Out-of-distribution trials show mixed generalization.</b> The method generalizes effectively to novel objects (up to 57% task success on sandwich), but performance varies by geometry (only 10% for chips). For navigation, the policy adapts best to the "right" gate region (40% success), while "front" and "left" regions failed completely due to bypassing or collision issues.
+          </p>
         </div>
       </div>
     </div>

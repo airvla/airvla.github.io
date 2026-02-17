@@ -1,3 +1,2 @@
-# Large video files - keep demo_video_air_vla.mov but ignore others
-video/*
-!video/demo_video_air_vla.mov
+# Large video files - allow compressed versions
+# Individual files under 100MB can be committed
