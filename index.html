@@ -325,34 +325,7 @@
     <div class="columns is-centered">
       <div class="column is-four-fifths">
         <h2 class="title is-3 has-text-centered">Results Highlights</h2>
-        <div class="content has-text-justified">
-          <p>
-            We conducted a cumulative <b>460 real-world flight trials</b> to evaluate our method across three task categories: pick-and-place (Penguin Grasp), gate navigation, and compositional navigate-then-grasp tasks. Each method was evaluated across twenty trials per task to assess:
-          </p>
-          <ul>
-            <li><b>Transfer:</b> How manipulation-pretrained VLA capability transfers to an underactuated aerial manipulator</li>
-            <li><b>Inference-time control:</b> Whether RTC and payload-aware guidance reduce execution sensitivity</li>
-            <li><b>Data synthesis:</b> Whether Gaussian-splat-based synthetic augmentation improves navigation</li>
-            <li><b>Compositionality:</b> Whether a single policy can reliably compose navigation and grasping</li>
-          </ul>
-        </div>
-
-        <h3 class="title is-4">Task Suite</h3>
-        <div class="content has-text-justified">
-          <ul>
-            <li><b>Penguin Grasp (Pick-and-Place):</b> "pick up the stuffed animal and put it in the blue bin"</li>
-            <li><b>Gate Navigation:</b> "fly through the gate and hover over the stuffed animal"</li>
-            <li><b>Compositional (Navigate-then-Grasp):</b> "fly through the gate and hover over the stuffed animal and then pick up the stuffed animal and put it in the blue bin"</li>
-          </ul>
-        </div>
-
-        <h3 class="title is-4">Task Demonstrations</h3>
-        <div class="content has-text-justified">
-          <p>
-            Below are example rollouts from our real-world experiments demonstrating successful task execution.
-          </p>
-        </div>
-
+        
         <div id="results-carousel-tasks" class="carousel results-carousel">
           <div class="item item-penguin">
             <video poster="" id="penguin" autoplay controls muted loop playsinline height="100%">
@@ -378,6 +351,27 @@
             </video>
             <p style="text-align: center; margin-top: 0.5rem;"><b>Compositional Task:</b> Navigate then grasp</p>
           </div>
+        </div>
+
+        <div class="content has-text-justified" style="margin-top: 2rem;">
+          <p>
+            We conducted a cumulative <b>460 real-world flight trials</b> to evaluate our method across three task categories: pick-and-place (Penguin Grasp), gate navigation, and compositional navigate-then-grasp tasks. Each method was evaluated across twenty trials per task to assess:
+          </p>
+          <ul>
+            <li><b>Transfer:</b> How manipulation-pretrained VLA capability transfers to an underactuated aerial manipulator</li>
+            <li><b>Inference-time control:</b> Whether RTC and payload-aware guidance reduce execution sensitivity</li>
+            <li><b>Data synthesis:</b> Whether Gaussian-splat-based synthetic augmentation improves navigation</li>
+            <li><b>Compositionality:</b> Whether a single policy can reliably compose navigation and grasping</li>
+          </ul>
+        </div>
+
+        <h3 class="title is-4">Task Suite</h3>
+        <div class="content has-text-justified">
+          <ul>
+            <li><b>Penguin Grasp (Pick-and-Place):</b> "pick up the stuffed animal and put it in the blue bin"</li>
+            <li><b>Gate Navigation:</b> "fly through the gate and hover over the stuffed animal"</li>
+            <li><b>Compositional (Navigate-then-Grasp):</b> "fly through the gate and hover over the stuffed animal and then pick up the stuffed animal and put it in the blue bin"</li>
+          </ul>
         </div>
 
         <h3 class="title is-4">Single Task Performance</h3>
